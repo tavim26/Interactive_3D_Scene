@@ -125,9 +125,11 @@ GLuint rainVAO, rainVBO;
 
 
 
-void initRainParticles(int numParticles) {
+void initRainParticles(int numParticles) 
+{
     rainParticles.clear();
-    for (int i = 0; i < numParticles; i++) {
+    for (int i = 0; i < numParticles; i++) 
+    {
 
         RainParticle particle;
 
@@ -150,8 +152,10 @@ void initRainParticles(int numParticles) {
 
 
 
-void updateRainParticles() {
-    for (auto& particle : rainParticles) {
+void updateRainParticles()
+{
+    for (auto& particle : rainParticles) 
+    {
         particle.position += particle.velocity;
 
        
@@ -166,7 +170,8 @@ void updateRainParticles() {
 
 
 
-void initRainBuffers() {
+void initRainBuffers() 
+{
     glGenVertexArrays(1, &rainVAO);
     glGenBuffers(1, &rainVBO);
 
@@ -182,21 +187,22 @@ void initRainBuffers() {
 
 
 
-void renderRain() {
+void renderRain() 
+{
     rainShaderProgram.useShaderProgram();
 
-    // Trimite matricele view și projection către shader
+    
     GLint viewLoc = glGetUniformLocation(rainShaderProgram.shaderProgram, "view");
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
 
     GLint projectionLoc = glGetUniformLocation(rainShaderProgram.shaderProgram, "projection");
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 
-    // Actualizează bufferul de poziții
+    
     glBindBuffer(GL_ARRAY_BUFFER, rainVBO);
     glBufferSubData(GL_ARRAY_BUFFER, 0, rainParticles.size() * sizeof(glm::vec3), &rainParticles[0].position);
 
-    // Desenează particulele
+    
     glBindVertexArray(rainVAO);
     glDrawArrays(GL_POINTS, 0, rainParticles.size());
     glBindVertexArray(0);
@@ -394,6 +400,41 @@ void initUniforms()
 }
 
 
+void updateViewAndNormalMatrix()
+{
+    viewMatrix = mainCamera.getViewMatrix();
+    basicShaderProgram.useShaderProgram();
+    glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+    normalMatrix = glm::mat3(glm::inverseTranspose(viewMatrix * modelMatrix));
+}
+
+void updateModelAndNormalMatrix()
+{
+    modelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(rotationAngle), glm::vec3(0, 1, 0));
+    normalMatrix = glm::mat3(glm::inverseTranspose(viewMatrix * modelMatrix));
+}
+
+void updateCarriageNormalMatrix()
+{
+    glm::mat4 carriageModelMatrix = glm::translate(glm::mat4(1.0f), carriagePosition);
+    normalMatrix = glm::mat3(glm::inverseTranspose(viewMatrix * carriageModelMatrix));
+}
+
+
+void updateCarriageTransform() 
+{
+    glm::mat4 carriageModelMatrix = glm::mat4(1.0f);
+  
+    carriageModelMatrix = glm::rotate(carriageModelMatrix, glm::radians(rotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+    
+    carriageModelMatrix = glm::translate(carriageModelMatrix, carriagePosition);
+    
+    glUniformMatrix4fv(modelMatrixLoc, 1, GL_FALSE, glm::value_ptr(carriageModelMatrix));
+    
+    normalMatrix = glm::mat3(glm::inverseTranspose(viewMatrix * carriageModelMatrix));
+}
+
+
 
 
 
@@ -413,8 +454,7 @@ void renderScene()
     mainSceneModel.Draw(basicShaderProgram);
 
 
-    glm::mat4 carriageModelMatrix = glm::translate(glm::mat4(1.0f), carriagePosition);
-    glUniformMatrix4fv(modelMatrixLoc, 1, GL_FALSE, glm::value_ptr(carriageModelMatrix));
+    updateCarriageTransform();
     carriage.Draw(basicShaderProgram);
 
     if (rainEnabled) {
@@ -506,6 +546,8 @@ void processKeyInputs()
 
             glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
             normalMatrix = glm::mat3(glm::inverseTranspose(viewMatrix * modelMatrix));
+
+           // updateCarriageTransform();
         }
     }
 
@@ -530,25 +572,9 @@ void processKeyInputs()
 
 
 
-void updateViewAndNormalMatrix()
-{
-    viewMatrix = mainCamera.getViewMatrix();
-    basicShaderProgram.useShaderProgram();
-    glUniformMatrix4fv(viewMatrixLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
-    normalMatrix = glm::mat3(glm::inverseTranspose(viewMatrix * modelMatrix));
-}
 
-void updateModelAndNormalMatrix()
-{
-    modelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(rotationAngle), glm::vec3(0, 1, 0));
-    normalMatrix = glm::mat3(glm::inverseTranspose(viewMatrix * modelMatrix));
-}
 
-void updateCarriageNormalMatrix()
-{
-    glm::mat4 carriageModelMatrix = glm::translate(glm::mat4(1.0f), carriagePosition);
-    normalMatrix = glm::mat3(glm::inverseTranspose(viewMatrix * carriageModelMatrix));
-}
+
 
 
 
@@ -595,7 +621,7 @@ void processMovement()
                 {
                     mainCamera.move(gps::MOVE_RIGHT, cameraSpeed);
                     updateViewAndNormalMatrix();
-                    updateCarriageNormalMatrix();
+                    
                 }
                 break;
 
@@ -605,7 +631,8 @@ void processMovement()
                 {
                     rotationAngle -= 1.0f;
                     updateModelAndNormalMatrix();
-                    updateCarriageNormalMatrix();
+                    updateCarriageTransform();
+                   
                 }
                 break;
 
@@ -615,7 +642,8 @@ void processMovement()
                 {
                     rotationAngle += 1.0f;
                     updateModelAndNormalMatrix();
-                    updateCarriageNormalMatrix();
+                    updateCarriageTransform();
+                 
                 }
                 break;
 
@@ -657,6 +685,7 @@ void processMovement()
     {
         rotationAngle += 1.0f;
         updateModelAndNormalMatrix();
+        updateCarriageTransform();
     }
 }
 
